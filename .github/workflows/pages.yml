@@ -16,44 +16,18 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
       pages: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Import verified source archive
-        if: ${{ hashFiles('index.html') == '' }}
-        shell: bash
+      - name: Validate JavaScript syntax
         run: |
-          python3 - <<'PY'
-          import base64, hashlib, io, pathlib, tarfile
-          parts = sorted(pathlib.Path('.bootstrap').glob('source-*.b64'))
-          if len(parts) != 11:
-              raise SystemExit(f'Expected 11 source parts, found {len(parts)}')
-          data = b''.join(base64.b64decode(p.read_text().strip(), validate=True) for p in parts)
-          expected = '6e8a9feabbfc89f638593c44f2f0b732ab353318c957917fcbc6e07ae051c2eb'
-          if hashlib.sha256(data).hexdigest() != expected:
-              raise SystemExit('Source archive checksum mismatch; refusing to import')
-          with tarfile.open(fileobj=io.BytesIO(data), mode='r:xz') as archive:
-              for member in archive.getmembers():
-                  path = pathlib.PurePosixPath(member.name)
-                  if not member.isfile() or path.is_absolute() or '..' in path.parts or '.git' in path.parts or '.github' in path.parts:
-                      raise SystemExit(f'Unsafe source path: {member.name}')
-              archive.extractall('.', filter='data')
-          for p in pathlib.Path('assets').glob('*.b64'):
-              p.with_suffix('').write_bytes(base64.b64decode(p.read_text(), validate=True))
-              p.unlink()
-          PY
-          python3 tools/prepare-release.py
-          npm test
-          rm -r .bootstrap
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add --all
-          git commit -m 'feat: import FolioForge v0.1 editorial studio'
-          git push origin HEAD:main
+          for source in src/*.js; do node --check "$source"; done
       - name: Run kernel tests
         run: npm test
       - name: Regenerate portable editions
@@ -66,7 +40,8 @@ jobs:
           python3 - <<'PY'
           import json, pathlib, subprocess
           sha = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
-          pathlib.Path('_site/build-info.json').write_text(json.dumps({'application': 'FolioForge', 'version': '0.1.0', 'commit': sha}) + '\n')
+          version = json.loads(pathlib.Path('package.json').read_text())['version']
+          pathlib.Path('_site/build-info.json').write_text(json.dumps({'application': 'FolioForge', 'version': version, 'commit': sha}) + '\n')
           PY
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
