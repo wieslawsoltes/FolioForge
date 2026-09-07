@@ -1,6 +1,8 @@
 name: Pages
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -15,6 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pages: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
