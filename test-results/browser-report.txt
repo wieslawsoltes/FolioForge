@@ -1,0 +1,51 @@
+PASS Initial publication and Canvas renderer initialize
+PASS Initial sample preflight has no issues
+PASS Editorial body balances both columns
+PASS All six thumbnail canvases render
+PASS Double-click opens a real native story editor
+PASS Text edit commits to the document story
+PASS Undo restores the prior story
+PASS Redo reapplies the text edit
+PASS Rectangle tool creates retained geometry
+PASS Swatch changes selected object fill
+PASS Pointer drag updates document coordinates
+PASS Resize handle applies frame dimensions
+PASS Keyboard nudge changes one point
+PASS Duplicate shortcut creates a new object
+PASS Duplicate is a single undo transaction
+PASS Ellipse tool creates analytic geometry
+PASS Type tool creates a story and editor
+PASS Character control updates font size
+PASS Paragraph alignment updates text layout
+PASS Named paragraph style applies
+PASS Image import embeds raster bytes and selects a frame
+PASS Image fitting mode is editable
+PASS Layer visibility removes artwork from the scene
+PASS Layer locking prevents canvas selection
+PASS Grouping links independently editable objects
+PASS Ungroup clears object grouping
+PASS Linked frames consume non-overlapping source offsets
+PASS Unlink splits story without deleting continuation text
+PASS Thread command reconnects compatible frames
+PASS Preflight detects a terminal overset story
+PASS Unicode composition preserves source text
+PASS Empty stories compose without phantom overflow
+PASS Tiny frames report overset rather than dropping content
+PASS SVG export contains positioned text and embedded images
+PASS PNG export renders nonempty pixels at requested resolution
+PASS Document JSON round-trip preserves editable object count
+PASS Preview toggles guides and editor overlay state
+PASS Add page changes the document structure
+PASS Page duplication creates a new page identity
+PASS Delete page confirmation removes the current page
+PASS Application menu opens a command popover
+PASS New publication opens real setup controls
+PASS Page preset changes dimensions
+PASS New publication honors setup controls
+PASS Laptop layout keeps the canvas visible
+PASS Compact layout retains interactive canvas
+{
+  "passed": 47,
+  "errors": [],
+  "backend": "Canvas 2D"
+}

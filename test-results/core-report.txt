@@ -1,0 +1,308 @@
+
+> folioforge@0.1.0 test
+> node --test tests/core.test.js
+
+TAP version 13
+# Subtest: empty document schema is valid
+ok 1 - empty document schema is valid
+  ---
+  duration_ms: 3.913907
+  type: 'test'
+  ...
+# Subtest: editorial sample validates and contains six real pages
+ok 2 - editorial sample validates and contains six real pages
+  ---
+  duration_ms: 2.449522
+  type: 'test'
+  ...
+# Subtest: sample stories have a valid thread
+ok 3 - sample stories have a valid thread
+  ---
+  duration_ms: 0.339292
+  type: 'test'
+  ...
+# Subtest: document rejects empty page collection
+ok 4 - document rejects empty page collection
+  ---
+  duration_ms: 0.292543
+  type: 'test'
+  ...
+# Subtest: document rejects nonfinite geometry
+ok 5 - document rejects nonfinite geometry
+  ---
+  duration_ms: 0.341215
+  type: 'test'
+  ...
+# Subtest: document rejects negative dimensions
+ok 6 - document rejects negative dimensions
+  ---
+  duration_ms: 0.210802
+  type: 'test'
+  ...
+# Subtest: document rejects duplicate object ids
+ok 7 - document rejects duplicate object ids
+  ---
+  duration_ms: 0.264762
+  type: 'test'
+  ...
+# Subtest: document rejects broken page references
+ok 8 - document rejects broken page references
+  ---
+  duration_ms: 0.349157
+  type: 'test'
+  ...
+# Subtest: document rejects broken layer references
+ok 9 - document rejects broken layer references
+  ---
+  duration_ms: 0.409195
+  type: 'test'
+  ...
+# Subtest: document rejects untrusted object IDs
+ok 10 - document rejects untrusted object IDs
+  ---
+  duration_ms: 0.95357
+  type: 'test'
+  ...
+# Subtest: document rejects color attribute injection
+ok 11 - document rejects color attribute injection
+  ---
+  duration_ms: 0.230751
+  type: 'test'
+  ...
+# Subtest: document rejects script image sources
+ok 12 - document rejects script image sources
+  ---
+  duration_ms: 0.22324
+  type: 'test'
+  ...
+# Subtest: document rejects external tracking image sources
+ok 13 - document rejects external tracking image sources
+  ---
+  duration_ms: 0.154609
+  type: 'test'
+  ...
+# Subtest: document permits embedded raster assets
+ok 14 - document permits embedded raster assets
+  ---
+  duration_ms: 0.167478
+  type: 'test'
+  ...
+# Subtest: document rejects margins that consume the page
+ok 15 - document rejects margins that consume the page
+  ---
+  duration_ms: 0.151685
+  type: 'test'
+  ...
+# Subtest: one gesture is one undo transaction
+ok 16 - one gesture is one undo transaction
+  ---
+  duration_ms: 0.488042
+  type: 'test'
+  ...
+# Subtest: undo restores document before a gesture
+ok 17 - undo restores document before a gesture
+  ---
+  duration_ms: 0.304821
+  type: 'test'
+  ...
+# Subtest: redo restores document after a gesture
+ok 18 - redo restores document after a gesture
+  ---
+  duration_ms: 0.323849
+  type: 'test'
+  ...
+# Subtest: new transaction clears redo branch
+ok 19 - new transaction clears redo branch
+  ---
+  duration_ms: 0.544065
+  type: 'test'
+  ...
+# Subtest: no-op transactions do not grow history
+ok 20 - no-op transactions do not grow history
+  ---
+  duration_ms: 0.173146
+  type: 'test'
+  ...
+# Subtest: cancel rolls back an in-progress gesture
+ok 21 - cancel rolls back an in-progress gesture
+  ---
+  duration_ms: 0.233365
+  type: 'test'
+  ...
+# Subtest: failed validation is atomic
+ok 22 - failed validation is atomic
+  ---
+  duration_ms: 0.30405
+  type: 'test'
+  ...
+# Subtest: exceptions inside a transaction roll back
+ok 23 - exceptions inside a transaction roll back
+  ---
+  duration_ms: 0.258272
+  type: 'test'
+  ...
+# Subtest: nested transactions are rejected
+ok 24 - nested transactions are rejected
+  ---
+  duration_ms: 0.174208
+  type: 'test'
+  ...
+# Subtest: history is count-bounded
+ok 25 - history is count-bounded
+  ---
+  duration_ms: 3.48996
+  type: 'test'
+  ...
+# Subtest: duplicate creates independent node geometry
+ok 26 - duplicate creates independent node geometry
+  ---
+  duration_ms: 0.408414
+  type: 'test'
+  ...
+# Subtest: duplicate text has an independent story
+ok 27 - duplicate text has an independent story
+  ---
+  duration_ms: 0.361645
+  type: 'test'
+  ...
+# Subtest: text linking combines stories
+ok 28 - text linking combines stories
+  ---
+  duration_ms: 0.335436
+  type: 'test'
+  ...
+# Subtest: text linking rejects self reference
+ok 29 - text linking rejects self reference
+  ---
+  duration_ms: 0.270149
+  type: 'test'
+  ...
+# Subtest: text linking rejects cyclic thread
+ok 30 - text linking rejects cyclic thread
+  ---
+  duration_ms: 0.372171
+  type: 'test'
+  ...
+# Subtest: import validation rejects cyclic thread
+ok 31 - import validation rejects cyclic thread
+  ---
+  duration_ms: 0.204152
+  type: 'test'
+  ...
+# Subtest: deleting a linked target removes incoming reference
+ok 32 - deleting a linked target removes incoming reference
+  ---
+  duration_ms: 0.315556
+  type: 'test'
+  ...
+# Subtest: camera roundtrip preserves world coordinates
+ok 33 - camera roundtrip preserves world coordinates
+  ---
+  duration_ms: 0.145445
+  type: 'test'
+  ...
+# Subtest: zoom preserves cursor anchor
+ok 34 - zoom preserves cursor anchor
+  ---
+  duration_ms: 0.145254
+  type: 'test'
+  ...
+# Subtest: zoom is clamped at supported bounds
+ok 35 - zoom is clamped at supported bounds
+  ---
+  duration_ms: 0.077875
+  type: 'test'
+  ...
+# Subtest: fit contains an entire spread
+ok 36 - fit contains an entire spread
+  ---
+  duration_ms: 0.098295
+  type: 'test'
+  ...
+# Subtest: rotated node local/world transforms are inverses
+ok 37 - rotated node local/world transforms are inverses
+  ---
+  duration_ms: 0.208919
+  type: 'test'
+  ...
+# Subtest: rotated geometry is hit in local coordinates
+ok 38 - rotated geometry is hit in local coordinates
+  ---
+  duration_ms: 0.166366
+  type: 'test'
+  ...
+# Subtest: ellipse hit testing excludes bounding-box corners
+ok 39 - ellipse hit testing excludes bounding-box corners
+  ---
+  duration_ms: 0.122421
+  type: 'test'
+  ...
+# Subtest: rotated bounds include all corners
+ok 40 - rotated bounds include all corners
+  ---
+  duration_ms: 0.267726
+  type: 'test'
+  ...
+# Subtest: spatial index returns frontmost objects first
+ok 41 - spatial index returns frontmost objects first
+  ---
+  duration_ms: 0.326403
+  type: 'test'
+  ...
+# Subtest: spatial index separates pages
+ok 42 - spatial index separates pages
+  ---
+  duration_ms: 0.388805
+  type: 'test'
+  ...
+# Subtest: layer visibility removes artwork from ordered page scene
+ok 43 - layer visibility removes artwork from ordered page scene
+  ---
+  duration_ms: 0.560668
+  type: 'test'
+  ...
+# Subtest: locked layers are not selectable
+ok 44 - locked layers are not selectable
+  ---
+  duration_ms: 0.153527
+  type: 'test'
+  ...
+# Subtest: preflight detects overset terminal frames
+ok 45 - preflight detects overset terminal frames
+  ---
+  duration_ms: 0.273815
+  type: 'test'
+  ...
+# Subtest: preflight detects a missing image
+ok 46 - preflight detects a missing image
+  ---
+  duration_ms: 0.259223
+  type: 'test'
+  ...
+# Subtest: preflight detects low effective resolution
+ok 47 - preflight detects low effective resolution
+  ---
+  duration_ms: 0.129982
+  type: 'test'
+  ...
+# Subtest: rectangle intersection includes touching edges
+ok 48 - rectangle intersection includes touching edges
+  ---
+  duration_ms: 0.329397
+  type: 'test'
+  ...
+# Subtest: color conversion preserves channels and transparency
+ok 49 - color conversion preserves channels and transparency
+  ---
+  duration_ms: 0.720825
+  type: 'test'
+  ...
+1..49
+# tests 49
+# suites 0
+# pass 49
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 94.074794

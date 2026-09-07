@@ -1,0 +1,6 @@
+{
+  "name": "folioforge", "version": "0.1.0", "private": true, "type": "module",
+  "description": "A zero-dependency, WebGPU-accelerated editorial layout editor.",
+  "scripts": {"start": "python3 -m http.server 8088 --bind 127.0.0.1", "test": "node --test tests/core.test.js", "bundle": "python3 tools/bundle.py"},
+  "engines": {"node": ">=20"}, "license": "MIT"
+}

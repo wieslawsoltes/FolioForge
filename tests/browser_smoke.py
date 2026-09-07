@@ -1,0 +1,148 @@
+#!/usr/bin/env python3
+"""Offline Playwright integration tests. No network navigation or CDN is required.
+Run: python3 tests/browser_smoke.py (requires Python playwright + Chromium).
+The about:blank test harness cannot expose WebGPU or origin-backed IndexedDB;
+those integrations need a subsequent HTTPS/localhost browser test.
+"""
+import asyncio,json,os
+from pathlib import Path
+from playwright.async_api import async_playwright
+ROOT=Path(__file__).resolve().parents[1]
+OUT=ROOT/'test-results';OUT.mkdir(exist_ok=True)
+
+async def main():
+ results=[];errors=[]
+ async with async_playwright() as p:
+  browser=await p.chromium.launch(executable_path=os.environ.get('CHROMIUM_PATH','/usr/bin/chromium'),headless=True,args=['--no-sandbox','--enable-unsafe-webgpu','--use-angle=swiftshader'])
+  page=await browser.new_page(viewport={'width':1600,'height':1000},device_scale_factor=1)
+  page.on('pageerror',lambda e:errors.append(str(e)))
+  await page.set_content((ROOT/'FolioForge.html').read_text(),wait_until='load')
+  await page.wait_for_function('window.folioforge?.ready')
+  await page.wait_for_timeout(500)
+  async def check(name,expression):
+   result=await page.evaluate(expression)
+   assert result, f'{name}: {result}'
+   results.append(name);print('PASS',name)
+  async def ev(code):return await page.evaluate(code)
+  async def at(x,y):
+   return await ev(f"(()=>{{const a=folioforge,r=a.overlay.getBoundingClientRect(),p=a.camera.toScreen({x},{y});return {{x:r.left+p.x,y:r.top+p.y}}}})()")
+  async def drag(x1,y1,x2,y2):
+   a,b=await at(x1,y1),await at(x2,y2)
+   await page.mouse.move(a['x'],a['y']);await page.mouse.down();await page.mouse.move(b['x'],b['y'],steps=7);await page.mouse.up();await page.wait_for_timeout(70)
+  await check('Initial publication and Canvas renderer initialize',"folioforge.ready && folioforge.doc.pages.length===6 && folioforge.renderer.mode==='canvas'")
+  await check('Initial sample preflight has no issues','folioforge.issues.length===0')
+  await check('Editorial body balances both columns',"(()=>{let n=folioforge.doc.nodes.find(n=>n.name==='Editorial body');let l=folioforge.textEngine.layouts.get(n.id);return l.lines.filter(l=>l.x>250).length>3&&!l.overflow})()")
+  await check('All six thumbnail canvases render','document.querySelectorAll(".page-thumb canvas").length===6')
+  await page.screenshot(path=str(OUT/'editor-desktop.png'))
+  # Native textarea editing on the visible sample headline.
+  position=await ev("(()=>{const a=folioforge,n=a.doc.nodes.find(n=>n.name==='Display headline'),p=a.placements().find(p=>p.id===n.pageId),s=a.camera.toScreen(p.x+n.x+40,n.y+40),r=a.overlay.getBoundingClientRect();return{x:r.left+s.x,y:r.top+s.y}})()")
+  await page.mouse.dblclick(position['x'],position['y'])
+  await check('Double-click opens a real native story editor','!!folioforge.editing && document.activeElement.tagName==="TEXTAREA"')
+  await page.locator('.story-edit-shell textarea').fill('Edited in FolioForge.')
+  await page.keyboard.press('Control+Enter')
+  await check('Text edit commits to the document story',"(()=>{const a=folioforge,n=a.doc.nodes.find(n=>n.name==='Display headline');return a.doc.stories[n.storyId].text==='Edited in FolioForge.'&&!a.editing})()")
+  await page.keyboard.press('Control+z')
+  await check('Undo restores the prior story',"(()=>{const a=folioforge,n=a.doc.nodes.find(n=>n.name==='Display headline');return a.doc.stories[n.storyId].text==='Less, but\\nmore meaning.'})()")
+  await page.keyboard.press('Control+Shift+z')
+  await check('Redo reapplies the text edit',"(()=>{const a=folioforge,n=a.doc.nodes.find(n=>n.name==='Display headline');return a.doc.stories[n.storyId].text==='Edited in FolioForge.'})()")
+  # A clean three-page publication for geometric manipulation.
+  await ev("folioforge.store.replace(FolioForgeAPI.createDocument({pages:3,name:'Integration test'}));folioforge.goPage(0)")
+  await page.click('[data-tool="rect"]')
+  await drag(90,110,250,230)
+  await check('Rectangle tool creates retained geometry',"folioforge.doc.nodes.length===1 && Math.abs(folioforge.primary.w-160)<1 && Math.abs(folioforge.primary.h-120)<1")
+  await page.click('[data-swatch="#e6a295"]')
+  await check('Swatch changes selected object fill',"folioforge.primary.fill==='#e6a295'")
+  await ev('folioforge.snapping=false')
+  await drag(140,150,176,177)
+  await check('Pointer drag updates document coordinates',"Math.abs(folioforge.primary.x-126)<1 && Math.abs(folioforge.primary.y-137)<1")
+  # Resize selected frame via the actual screen handle.
+  handle=await ev("(()=>{const a=folioforge,n=a.primary,p=a.placements()[0],h=a.nodeHandles(n,p).find(h=>h.name==='se'),r=a.overlay.getBoundingClientRect();return{x:h.x+r.left,y:h.y+r.top,z:a.camera.zoom}})()")
+  await page.mouse.move(handle['x'],handle['y']);await page.mouse.down();await page.mouse.move(handle['x']+40*handle['z'],handle['y']+30*handle['z'],steps=5);await page.mouse.up()
+  await check('Resize handle applies frame dimensions',"Math.abs(folioforge.primary.w-200)<1 && Math.abs(folioforge.primary.h-150)<1")
+  await page.keyboard.press('ArrowRight')
+  await check('Keyboard nudge changes one point',"Math.abs(folioforge.primary.x-127)<1")
+  await page.keyboard.press('Control+j')
+  await check('Duplicate shortcut creates a new object',"folioforge.doc.nodes.length===2 && folioforge.selection.size===1")
+  await page.keyboard.press('Control+z')
+  await check('Duplicate is a single undo transaction','folioforge.doc.nodes.length===1')
+  await page.click('[data-tool="ellipse"]');await drag(350,125,450,225)
+  await check('Ellipse tool creates analytic geometry',"folioforge.primary.type==='ellipse'")
+  await page.click('[data-tool="text"]');await drag(70,340,330,430)
+  await check('Type tool creates a story and editor',"folioforge.primary.type==='text' && !!folioforge.editing")
+  await page.locator('.story-edit-shell textarea').fill('A working text frame.');await page.keyboard.press('Control+Enter')
+  await page.locator('#control-size').fill('22');await page.locator('#control-size').dispatch_event('change')
+  await check('Character control updates font size','folioforge.primary.style.fontSize===22')
+  await page.click('[data-align="center"]')
+  await check('Paragraph alignment updates text layout',"folioforge.primary.style.align==='center'")
+  await page.click('[data-paragraph-style="heading"]')
+  await check('Named paragraph style applies','folioforge.primary.style.fontSize===24 && folioforge.primary.styleId==="heading"')
+  # Image placement is a real file-read operation, embedded rather than a decorative placeholder.
+  await ev("async()=>{const c=document.createElement('canvas');c.width=640;c.height=480;const x=c.getContext('2d');x.fillStyle='#446644';x.fillRect(0,0,640,480);const b=await new Promise(r=>c.toBlob(r));const f=new File([b],'test-image.png',{type:'image/png'});await folioforge.placeFiles([f]);}")
+  await check('Image import embeds raster bytes and selects a frame',"folioforge.primary.type==='image' && folioforge.doc.assets[folioforge.primary.assetId].src.startsWith('data:image/png')")
+  await ev("folioforge.changeProperty('fit','contain')")
+  await check('Image fitting mode is editable',"folioforge.primary.fit==='contain'")
+  await ev("folioforge.panel='layers';folioforge.renderInspector()")
+  await page.locator('[data-layer-eye="content"]').click()
+  await check('Layer visibility removes artwork from the scene',"!folioforge.doc.layers[0].visible && folioforge.store.nodesOnPage(folioforge.activePage.id).every(n=>n.layerId!=='content')")
+  await page.locator('[data-layer-eye="content"]').click()
+  await page.locator('[data-layer-lock="content"]').click()
+  await check('Layer locking prevents canvas selection',"folioforge.doc.layers[0].locked && !folioforge.store.selectable(folioforge.doc.nodes.find(n=>n.layerId==='content'))")
+  await page.locator('[data-layer-lock="content"]').click()
+  await ev("folioforge.panel='properties';folioforge.renderInspector()")
+  # Group and arrange via command API (same command registry used by menu/keyboard).
+  await ev("folioforge.select(folioforge.doc.nodes.filter(n=>n.type==='rect'||n.type==='ellipse').map(n=>n.id));folioforge.run('group')")
+  await check('Grouping links independently editable objects',"(()=>{let a=folioforge.selected;return a.length===2&&a[0].groupId===a[1].groupId&&!!a[0].groupId})()")
+  await ev("folioforge.run('ungroup')")
+  await check('Ungroup clears object grouping','folioforge.selected.every(n=>!n.groupId)')
+  # Linked-story composition and overset detection.
+  await ev("(()=>{const a=folioforge,d=FolioForgeAPI.createDemo();a.store.replace(d);a.goPage(4);const n=d.nodes.find(n=>n.name==='Essay · first frame');a.select([n.id]);})()")
+  await check('Linked frames consume non-overlapping source offsets',"(()=>{const a=folioforge,n=a.primary,t=a.store.getNode(n.nextId),l=a.textEngine.layouts;return l.get(n.id).end===l.get(t.id).start && l.get(t.id).start>0})()")
+  await ev("folioforge.run('unlink')")
+  await check('Unlink splits story without deleting continuation text',"(()=>{const a=folioforge,n=a.primary,t=a.doc.nodes.find(n=>n.name==='Essay · continuation');return !n.nextId&&n.storyId!==t.storyId&&a.doc.stories[t.storyId].text.length>0})()")
+  await ev("folioforge.select(folioforge.doc.nodes.filter(n=>n.name.startsWith('Essay ·')).map(n=>n.id));folioforge.run('thread')")
+  await check('Thread command reconnects compatible frames',"folioforge.selected.some(n=>n.nextId)")
+  await ev("(()=>{const a=folioforge,n=a.selected.find(n=>n.nextId);a.store.transact('overset test',d=>d.stories[n.storyId].text+=' A long sentence.'.repeat(600));})()")
+  await check('Preflight detects a terminal overset story',"folioforge.issues.some(i=>i.message.includes('Overset'))")
+  await ev("folioforge.store.undo()")
+  # Tests composition without rendering text as DOM paragraphs.
+  await check('Unicode composition preserves source text',"(()=>{const e=new FolioForgeAPI.TextEngine(),s={...folioforge.doc.nodes.find(n=>n.type==='text').style,fontSize:15,columns:1},text='Zażółć gęślą jaźń 👩🏽‍💻 東京';const l=e.layoutFrame(text,0,{w:55,h:600},s);return l.end===text.length&&!l.lines.some(x=>/[\\uD800-\\uDBFF]$/.test(x.text))})()")
+  await check('Empty stories compose without phantom overflow',"(()=>{const e=new FolioForgeAPI.TextEngine(),s=folioforge.doc.nodes.find(n=>n.type==='text').style,l=e.layoutFrame('',0,{w:200,h:100},s);return l.end===0&&!l.overflow&&l.lines.length===0})()")
+  await check('Tiny frames report overset rather than dropping content',"(()=>{const e=new FolioForgeAPI.TextEngine(),s=folioforge.doc.nodes.find(n=>n.type==='text').style,l=e.layoutFrame('Content',0,{w:2,h:1},s);return l.end===0&&l.overflow})()")
+  await ev("folioforge.goPage(2)")
+  await check('SVG export contains positioned text and embedded images',"async()=>{const a=folioforge,b=await FolioForgeAPI.exportSVG(a.doc,a.activePage,a.textEngine),t=await b.text();const x=new DOMParser().parseFromString(t,'image/svg+xml');return b.type==='image/svg+xml'&&!x.querySelector('parsererror')&&x.querySelectorAll('text').length>10&&x.querySelector('image').getAttribute('href').startsWith('data:image/webp')}")
+  await check('PNG export renders nonempty pixels at requested resolution',"async()=>{const a=folioforge,c=await a.renderer.pageCanvas(a.doc,a.activePage,2);const p=c.getContext('2d').getImageData(100,100,1,1).data;return c.width===Math.ceil(a.doc.settings.width*2)&&c.height===Math.ceil(a.doc.settings.height*2)&&p[3]===255&&p[0]>0}")
+  await check('Document JSON round-trip preserves editable object count',"async()=>{const a=folioforge,f=new File([JSON.stringify(a.doc)],'test.folio',{type:'application/json'}),d=await FolioForgeAPI.openDocument(f);return d.nodes.length===a.doc.nodes.length&&d.pages.length===a.doc.pages.length}")
+  await ev("folioforge.run('preview')")
+  await check('Preview toggles guides and editor overlay state','folioforge.preview && document.body.classList.contains("preview")')
+  await ev("folioforge.run('preview');folioforge.run('addPage')")
+  await check('Add page changes the document structure','folioforge.doc.pages.length===7')
+  await ev("folioforge.run('duplicatePage')")
+  await check('Page duplication creates a new page identity','folioforge.doc.pages.length===8 && new Set(folioforge.doc.pages.map(p=>p.id)).size===8')
+  await ev("folioforge.run('deletePage')")
+  await page.click('#modal-actions button.primary')
+  await check('Delete page confirmation removes the current page','folioforge.doc.pages.length===7')
+  await page.click('[data-menu="File"]')
+  await check('Application menu opens a command popover','!document.querySelector("#menu-popover").hidden')
+  await page.click('#menu-popover [data-command="new"]')
+  await check('New publication opens real setup controls','document.querySelector("#modal").open && !!document.querySelector("#new-width")')
+  await page.click('[data-preset="square"]')
+  await check('Page preset changes dimensions','document.querySelector("#new-width").value===document.querySelector("#new-height").value')
+  await page.fill('input[name="name"]','Square test');await page.fill('input[name="pages"]','2');await page.click('#modal-actions button.primary')
+  await check('New publication honors setup controls',"folioforge.doc.name==='Square test' && folioforge.doc.pages.length===2 && folioforge.doc.settings.width===folioforge.doc.settings.height")
+  # Screenshot sizes and UI layout; start from the sample again.
+  await ev("folioforge.store.replace(FolioForgeAPI.createDemo());folioforge.goPage(1)")
+  await page.wait_for_timeout(350)
+  await page.screenshot(path=str(OUT/'editor-desktop.png'))
+  await page.set_viewport_size({'width':1280,'height':800});await ev('folioforge.fit()');await page.wait_for_timeout(150)
+  await page.screenshot(path=str(OUT/'editor-laptop.png'))
+  await check('Laptop layout keeps the canvas visible','folioforge.width>550 && folioforge.height>400')
+  await page.set_viewport_size({'width':700,'height':700});await ev('folioforge.fit()');await page.wait_for_timeout(150)
+  await page.screenshot(path=str(OUT/'editor-compact.png'))
+  await check('Compact layout retains interactive canvas','folioforge.width>500 && folioforge.height>300')
+  assert not errors, errors
+  results.append('No uncaught browser exceptions')
+  report={'passed':len(results),'tests':results,'uncaughtErrors':errors,'backend':await ev('folioforge.backend'),'webgpuValidated':False,'indexedDBValidated':False,'notes':'In-memory about:blank harness. GPU and IndexedDB require a secure, origin-backed manual/integration run.'}
+  (OUT/'browser-report.json').write_text(json.dumps(report,indent=2))
+  print(json.dumps({'passed':len(results),'errors':errors,'backend':report['backend']},indent=2))
+  await browser.close()
+asyncio.run(main())
